@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="th" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090b10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="เงินของฉัน">
+<meta name="description" content="แอปรายรับรายจ่ายส่วนตัว">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>เงินของฉัน</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#131720;--panel2:#191f2b;--line:#272e3b;--text:#f4f6fb;--muted:#929bad;--green:#35d39a;--red:#ff6b78;--blue:#8b9cff;--yellow:#ffc96b;--shadow:0 14px 40px #0005}
+*{box-sizing:border-box}html{background:var(--bg);scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#202b46 0%,var(--bg) 55%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Noto Sans Thai",sans-serif;padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 92px);max-width:620px;margin:auto;min-height:100vh}
+button,input,select{font:inherit}button{cursor:pointer}.top{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 20px}.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#647dff,#3547b9);display:grid;place-items:center;font-size:22px;box-shadow:0 8px 24px #5268ff44}.eyebrow{font-size:11px;color:var(--muted);letter-spacing:.08em}.brand h1{font-size:20px;margin:1px 0 0}.iconbtn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;width:42px;height:42px;font-size:18px}
+.card{background:linear-gradient(145deg,#171d29,#11151d);border:1px solid var(--line);border-radius:22px;padding:17px;margin-bottom:14px;box-shadow:var(--shadow)}.monthrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.monthrow label{font-size:13px;color:var(--muted)}input,select{background:#0c1018;border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px;min-width:0;width:100%;outline:none}input:focus,select:focus{border-color:var(--blue)}input[type=month],input[type=date]{width:auto;color-scheme:dark}.balance-label{color:var(--muted);font-size:13px}.balance{font-size:34px;font-weight:750;letter-spacing:-1px;margin:4px 0 17px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#0c111a;border:1px solid #252d3a;border-radius:15px;padding:12px}.stat small{color:var(--muted);display:flex;gap:6px;align-items:center}.stat strong{display:block;font-size:17px;margin-top:6px}.green{color:var(--green)}.red{color:var(--red)}.sectionhead{display:flex;justify-content:space-between;align-items:center;margin:22px 3px 11px}.sectionhead h2{font-size:16px;margin:0}.sectionhead span{font-size:12px;color:var(--muted)}.seg{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#0b0f17;padding:5px;border-radius:14px;margin-bottom:13px}.seg button{border:0;border-radius:10px;padding:11px;background:transparent;color:var(--muted);font-weight:650}.seg button.active.exp{background:#48232c;color:#ff8c98}.seg button.active.inc{background:#153c32;color:#6ce3b5}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}.formgrid.full{grid-template-columns:1fr}.amount{font-size:22px;font-weight:700}.primary{width:100%;border:0;border-radius:14px;padding:14px;background:linear-gradient(110deg,#657bff,#475bd8);color:white;font-weight:700;margin-top:3px;box-shadow:0 8px 20px #5369ef33}.secondary{border:1px solid var(--line);background:#1a2130;color:var(--text);border-radius:11px;padding:10px}.tools{display:flex;gap:8px}.tools button{flex:1;font-size:12px}.list{padding:4px 15px}.entry{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--line)}.entry:last-child{border:0}.bubble{width:42px;height:42px;border-radius:14px;background:#20283a;display:grid;place-items:center;font-size:19px;flex:none}.entrymain{flex:1;min-width:0}.entrymain b{font-size:14px}.entrymain small{display:block;color:var(--muted);font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.entryright{text-align:right}.entryright strong{font-size:14px;white-space:nowrap}.entryright button{display:block;margin:5px 0 0 auto;border:0;background:transparent;color:var(--muted);font-size:11px;padding:2px}.empty{text-align:center;color:var(--muted);padding:25px 10px;font-size:13px}.hint{color:var(--muted);font-size:11px;line-height:1.6;margin:10px 3px}.bottom{position:fixed;bottom:0;left:0;right:0;padding:10px 18px calc(env(safe-area-inset-bottom) + 8px);background:#0a0d14ed;backdrop-filter:blur(18px);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:5}.bottom span{font-size:11px;color:var(--muted)}.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#e9eefc;color:#111827;padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:10}.toast.show{opacity:1}.modalback{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px}.modal h3{margin:0 0 12px}.modal .actions{display:flex;gap:8px;margin-top:12px}.modal .actions button{flex:1}.danger{background:#49232b;border-color:#71313e;color:#ff9aa4}@media(min-width:540px){body{padding-top:30px}.card{padding:20px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><div class="logo">฿</div><div><div class="eyebrow">PERSONAL FINANCE</div><h1>เงินของฉัน</h1></div></div><button class="iconbtn" id="exportBtn" aria-label="ส่งออกข้อมูล">⇧</button></header>
+
+<section class="card">
+ <div class="monthrow"><label for="month">ภาพรวมประจำเดือน</label><input type="month" id="month"></div>
+ <div class="balance-label">ยอดคงเหลือสุทธิ</div><div class="balance" id="balance">฿0.00</div>
+ <div class="stats"><div class="stat"><small>↗ รายรับทั้งหมด</small><strong class="green" id="income">฿0.00</strong></div><div class="stat"><small>↘ รายจ่ายทั้งหมด</small><strong class="red" id="expense">฿0.00</strong></div></div>
+</section>
+
+<div class="sectionhead"><h2 id="formTitle">เพิ่มรายการ</h2><span>บันทึกได้ทันที</span></div>
+<section class="card">
+ <div class="seg"><button id="expenseTab" class="active exp">รายจ่าย</button><button id="incomeTab">รายรับ</button></div>
+ <div class="formgrid"><input id="amount" class="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="จำนวนเงิน"><select id="category"></select></div>
+ <div class="formgrid"><input id="note" placeholder="รายละเอียด / โน้ต"><input id="date" type="date"></div>
+ <button class="primary" id="saveBtn">＋ เพิ่มรายการ</button>
+ <p class="hint" id="editHint" hidden>กำลังแก้ไขรายการ <button id="cancelEdit" class="secondary">ยกเลิก</button></p>
+</section>
+
+<div class="sectionhead"><h2>รายการเคลื่อนไหว</h2><span id="count">0 รายการ</span></div>
+<section class="card list" id="entries"></section>
+<div class="sectionhead"><h2>จัดการข้อมูล</h2></div>
+<section class="card"><div class="tools"><button class="secondary" id="backupBtn">สำรองข้อมูล</button><button class="secondary" id="importBtn">นำเข้าข้อมูล</button><button class="secondary" id="clearBtn">ล้างข้อมูล</button></div><input type="file" id="fileInput" accept="application/json" hidden><p class="hint">ข้อมูลเก็บไว้ในเบราว์เซอร์ของอุปกรณ์นี้ แนะนำให้สำรองข้อมูลเป็นระยะ และอย่าล้างข้อมูลเว็บไซต์หากยังไม่ได้สำรอง</p></section>
+<footer class="bottom"><span>ข้อมูลส่วนตัวของคุณ • จัดเก็บบนอุปกรณ์นี้</span></footer><div class="toast" id="toast"></div>
+<div class="modalback" id="modal"><div class="modal"><h3>ยืนยันการลบรายการ?</h3><p class="hint">รายการนี้จะถูกลบออกจากอุปกรณ์</p><div class="actions"><button class="secondary" id="noDelete">ยกเลิก</button><button class="secondary danger" id="yesDelete">ลบรายการ</button></div></div></div>
+<script>
+const CATS={ex:["อาหาร","เดินทาง","ของใช้","เกม","บันเทิง","การศึกษา","สุขภาพ","ที่พัก","อื่นๆ"],in:["รายรับ","เงินเดือน","ค่าขนม","รายได้พิเศษ","งานเสริม","อื่น ๆ"]};
+const $=id=>document.getElementById(id);let type="ex",items=[],editing=null,deleteId=null;
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const money=n=>"฿"+Number(n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const icons={"อาหาร":"🍜","เดินทาง":"🛵","ของใช้":"🛍️","เกม":"🎮","บันเทิง":"🎧","การศึกษา":"📚","สุขภาพ":"💊","ที่พัก":"🏠","รายรับ":"💵","เงินเดือน":"💼","ค่าขนม":"🪙","รายได้พิเศษ":"✨","งานเสริม":"🧾","อื่นๆ":"📌","อื่น ๆ":"📌"};
+function load(){try{items=JSON.parse(localStorage.getItem("money")||"[]");if(!Array.isArray(items))items=[]}catch{items=[]}}
+function save(){localStorage.setItem("money",JSON.stringify(items))}
+function setType(t){type=t;$("expenseTab").className=t==="ex"?"active exp":"";$("incomeTab").className=t==="in"?"active inc":"";$("category").innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join("")}
+function render(){const m=$("month").value;const list=items.filter(x=>x.d?.slice(0,7)===m).sort((a,b)=>b.d.localeCompare(a.d)||b.id-a.id);let inc=0,exp=0;list.forEach(x=>x.t==="in"?inc+=Number(x.a):exp+=Number(x.a));$("income").textContent=money(inc);$("expense").textContent=money(exp);$("balance").textContent=money(inc-exp);$("balance").style.color=inc-exp<0?"var(--red)":"var(--text)";$("count").textContent=list.length+" รายการ";
+$("entries").innerHTML=list.length?list.map(x=>`<div class="entry"><div class="bubble">${icons[x.c]||"📌"}</div><div class="entrymain"><b>${esc(x.c)}</b><small>${esc(x.d)}${x.n?" · "+esc(x.n):""}</small></div><div class="entryright"><strong class="${x.t==="in"?"green":"red"}">${x.t==="in"?"+":"−"}${money(x.a)}</strong><button data-edit="${x.id}">แก้ไข · ลบ</button></div></div>`).join(""):'<div class="empty">ยังไม่มีรายการในเดือนนี้<br>เริ่มบันทึกรายรับหรือรายจ่ายได้เลย</div>'}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function resetForm(){editing=null;$("amount").value="";$("note").value="";$("date").value=today();$("saveBtn").textContent="＋ เพิ่มรายการ";$("formTitle").textContent="เพิ่มรายการ";$("editHint").hidden=true;setType("ex")}
+function edit(id){const x=items.find(v=>String(v.id)===String(id));if(!x)return;editing=x.id;setType(x.t);$("amount").value=x.a;$("note").value=x.n||"";$("date").value=x.d;$("category").value=x.c;$("saveBtn").textContent="บันทึกการแก้ไข";$("formTitle").textContent="แก้ไขรายการ";$("editHint").hidden=false;window.scrollTo({top:0,behavior:"smooth"})}
+function toast(s){$("toast").textContent=s;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),1800)}
+$("expenseTab").onclick=()=>setType("ex");$("incomeTab").onclick=()=>setType("in");$("month").onchange=render;$("cancelEdit").onclick=resetForm;
+$("saveBtn").onclick=()=>{const a=Number($("amount").value),d=$("date").value||today();if(!(a>0)){toast("กรุณาใส่จำนวนเงินให้ถูกต้อง");$("amount").focus();return}const record={id:editing??Date.now(),t:type,a,c:$("category").value,n:$("note").value.trim(),d};if(editing!==null){items=items.map(x=>x.id===editing?record:x);toast("แก้ไขรายการแล้ว")}else{items.push(record);toast("เพิ่มรายการแล้ว")}save();$("month").value=d.slice(0,7);resetForm();render()};
+$("entries").onclick=e=>{const b=e.target.closest("[data-edit]");if(b){const id=b.dataset.edit;const x=items.find(v=>String(v.id)===id);if(!x)return;const choice=prompt("พิมพ์ E เพื่อแก้ไข หรือ D เพื่อลบ","E");if(choice?.toUpperCase()==="E")edit(id);else if(choice?.toUpperCase()==="D"){deleteId=id;$("modal").style.display="flex"}}};
+$("noDelete").onclick=()=>$("modal").style.display="none";$("yesDelete").onclick=()=>{items=items.filter(x=>String(x.id)!==String(deleteId));save();$("modal").style.display="none";render();toast("ลบรายการแล้ว")};
+function download(data,name,type){const blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
+function exportData(){download(JSON.stringify({version:1,exportedAt:new Date().toISOString(),items},null,2),"money-backup.json","application/json");toast("ส่งออกข้อมูลแล้ว")}
+$("exportBtn").onclick=exportData;$("backupBtn").onclick=exportData;$("importBtn").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;if(!Array.isArray(arr))throw Error();if(!confirm("นำเข้าข้อมูล "+arr.length+" รายการ? ข้อมูลปัจจุบันจะถูกแทนที่"))return;items=arr;save();render();toast("นำเข้าข้อมูลแล้ว")}catch{toast("ไฟล์ไม่ถูกต้อง")}e.target.value=""};
+$("clearBtn").onclick=()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];save();render();toast("ล้างข้อมูลแล้ว")}};
+load();
+// Keep the original app's existing localStorage records; seed only on a genuinely empty first run.
+if(items.length===0&&!localStorage.getItem("money_seed1")){const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));save();localStorage.setItem("money_seed1","1")}
+$("month").value=today().slice(0,7);$("date").value=today();setType("ex");render();
+if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+</script>
+</body></html>
