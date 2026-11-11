@@ -20,6 +20,13 @@ button,input,select{font:inherit}button{cursor:pointer}.top{display:flex;justify
 </head>
 <body>
 <header class="top"><div class="brand"><div class="logo">฿</div><div><div class="eyebrow">PERSONAL FINANCE</div><h1>เงินของฉัน</h1></div></div><button class="iconbtn" id="exportBtn" aria-label="ส่งออกข้อมูล">⇧</button></header>
+<section class="card" id="cloudCard">
+ <div class="sectionhead" style="margin:0 0 10px"><h2>☁️ ซิงก์ข้อมูลข้ามอุปกรณ์</h2><span id="cloudStatus">ยังไม่เชื่อมต่อ</span></div>
+ <div class="formgrid"><input id="cloudEmail" type="email" autocomplete="username" placeholder="อีเมล"><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่าน"></div>
+ <div class="tools"><button class="secondary" id="cloudLogin">เข้าสู่ระบบ</button><button class="secondary" id="cloudSignup">สมัครสมาชิก</button><button class="secondary" id="cloudLogout" hidden>ออกจากระบบ</button></div>
+ <p class="hint" id="cloudHint">สมัครสมาชิกหรือเข้าสู่ระบบด้วยอีเมลเดียวกันบนทุกอุปกรณ์ เพื่อซิงก์ข้อมูลผ่านคลาวด์</p>
+</section>
+
 
 <section class="card">
  <div class="monthrow"><label for="month">ภาพรวมประจำเดือน</label><input type="month" id="month"></div>
@@ -42,14 +49,17 @@ button,input,select{font:inherit}button{cursor:pointer}.top{display:flex;justify
 <section class="card"><div class="tools"><button class="secondary" id="backupBtn">สำรองข้อมูล</button><button class="secondary" id="importBtn">นำเข้าข้อมูล</button><button class="secondary" id="clearBtn">ล้างข้อมูล</button></div><input type="file" id="fileInput" accept="application/json" hidden><p class="hint">ข้อมูลเก็บไว้ในเบราว์เซอร์ของอุปกรณ์นี้ แนะนำให้สำรองข้อมูลเป็นระยะ และอย่าล้างข้อมูลเว็บไซต์หากยังไม่ได้สำรอง</p></section>
 <footer class="bottom"><span>ข้อมูลส่วนตัวของคุณ • จัดเก็บบนอุปกรณ์นี้</span></footer><div class="toast" id="toast"></div>
 <div class="modalback" id="modal"><div class="modal"><h3>ยืนยันการลบรายการ?</h3><p class="hint">รายการนี้จะถูกลบออกจากอุปกรณ์</p><div class="actions"><button class="secondary" id="noDelete">ยกเลิก</button><button class="secondary danger" id="yesDelete">ลบรายการ</button></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL="https://rvtbcjrcqlokgvtpenik.supabase.co";
+const SUPABASE_KEY="sb_publishable_YXmB2qa8OCeX1py7E24fTg_3omH7Ke-";
 const CATS={ex:["อาหาร","เดินทาง","ของใช้","เกม","บันเทิง","การศึกษา","สุขภาพ","ที่พัก","อื่นๆ"],in:["รายรับ","เงินเดือน","ค่าขนม","รายได้พิเศษ","งานเสริม","อื่น ๆ"]};
 const $=id=>document.getElementById(id);let type="ex",items=[],editing=null,deleteId=null;
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
 const money=n=>"฿"+Number(n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const icons={"อาหาร":"🍜","เดินทาง":"🛵","ของใช้":"🛍️","เกม":"🎮","บันเทิง":"🎧","การศึกษา":"📚","สุขภาพ":"💊","ที่พัก":"🏠","รายรับ":"💵","เงินเดือน":"💼","ค่าขนม":"🪙","รายได้พิเศษ":"✨","งานเสริม":"🧾","อื่นๆ":"📌","อื่น ๆ":"📌"};
 function load(){try{items=JSON.parse(localStorage.getItem("money")||"[]");if(!Array.isArray(items))items=[]}catch{items=[]}}
-function save(){localStorage.setItem("money",JSON.stringify(items))}
+function save(){localStorage.setItem("money",JSON.stringify(items));scheduleCloudSave()}
 function setType(t){type=t;$("expenseTab").className=t==="ex"?"active exp":"";$("incomeTab").className=t==="in"?"active inc":"";$("category").innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join("")}
 function render(){const m=$("month").value;const list=items.filter(x=>x.d?.slice(0,7)===m).sort((a,b)=>b.d.localeCompare(a.d)||b.id-a.id);let inc=0,exp=0;list.forEach(x=>x.t==="in"?inc+=Number(x.a):exp+=Number(x.a));$("income").textContent=money(inc);$("expense").textContent=money(exp);$("balance").textContent=money(inc-exp);$("balance").style.color=inc-exp<0?"var(--red)":"var(--text)";$("count").textContent=list.length+" รายการ";
 $("entries").innerHTML=list.length?list.map(x=>`<div class="entry"><div class="bubble">${icons[x.c]||"📌"}</div><div class="entrymain"><b>${esc(x.c)}</b><small>${esc(x.d)}${x.n?" · "+esc(x.n):""}</small></div><div class="entryright"><strong class="${x.t==="in"?"green":"red"}">${x.t==="in"?"+":"−"}${money(x.a)}</strong><button data-edit="${x.id}">แก้ไข · ลบ</button></div></div>`).join(""):'<div class="empty">ยังไม่มีรายการในเดือนนี้<br>เริ่มบันทึกรายรับหรือรายจ่ายได้เลย</div>'}
@@ -60,7 +70,7 @@ function toast(s){$("toast").textContent=s;$("toast").classList.add("show");setT
 $("expenseTab").onclick=()=>setType("ex");$("incomeTab").onclick=()=>setType("in");$("month").onchange=render;$("cancelEdit").onclick=resetForm;
 $("saveBtn").onclick=()=>{const a=Number($("amount").value),d=$("date").value||today();if(!(a>0)){toast("กรุณาใส่จำนวนเงินให้ถูกต้อง");$("amount").focus();return}const record={id:editing??Date.now(),t:type,a,c:$("category").value,n:$("note").value.trim(),d};if(editing!==null){items=items.map(x=>x.id===editing?record:x);toast("แก้ไขรายการแล้ว")}else{items.push(record);toast("เพิ่มรายการแล้ว")}save();$("month").value=d.slice(0,7);resetForm();render()};
 $("entries").onclick=e=>{const b=e.target.closest("[data-edit]");if(b){const id=b.dataset.edit;const x=items.find(v=>String(v.id)===id);if(!x)return;const choice=prompt("พิมพ์ E เพื่อแก้ไข หรือ D เพื่อลบ","E");if(choice?.toUpperCase()==="E")edit(id);else if(choice?.toUpperCase()==="D"){deleteId=id;$("modal").style.display="flex"}}};
-$("noDelete").onclick=()=>$("modal").style.display="none";$("yesDelete").onclick=()=>{items=items.filter(x=>String(x.id)!==String(deleteId));save();$("modal").style.display="none";render();toast("ลบรายการแล้ว")};
+$("noDelete").onclick=()=>$("modal").style.display="none";$("yesDelete").onclick=async()=>{const removed=deleteId;items=items.filter(x=>String(x.id)!==String(removed));save();if(cloudUser)await cloud.from("transactions").delete().eq("user_id",cloudUser.id).eq("id",Number(removed));$("modal").style.display="none";render();toast("ลบรายการแล้ว")};
 function download(data,name,type){const blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
 function exportData(){download(JSON.stringify({version:1,exportedAt:new Date().toISOString(),items},null,2),"money-backup.json","application/json");toast("ส่งออกข้อมูลแล้ว")}
 $("exportBtn").onclick=exportData;$("backupBtn").onclick=exportData;$("importBtn").onclick=()=>$("fileInput").click();
@@ -70,6 +80,20 @@ load();
 // Keep the original app's existing localStorage records; seed only on a genuinely empty first run.
 if(items.length===0&&!localStorage.getItem("money_seed1")){const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));save();localStorage.setItem("money_seed1","1")}
 $("month").value=today().slice(0,7);$("date").value=today();setType("ex");render();
+
+let cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false;
+const cloudStatus=(s)=>$("cloudStatus").textContent=s;
+function scheduleCloudSave(){if(!cloudUser||cloudBusy)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,700)}
+function toRow(x){return {user_id:cloudUser.id,id:Number(x.id),t:x.t,a:Number(x.a),c:String(x.c||""),n:String(x.n||""),d:x.d}}
+async function pushLocalToCloud(){if(!cloudUser||!cloud)return;cloudBusy=true;cloudStatus("กำลังซิงก์…");try{const rows=items.map(toRow);if(rows.length){const {error}=await cloud.from("transactions").upsert(rows,{onConflict:"user_id,id"});if(error)throw error}cloudStatus("ซิงก์แล้ว")}catch(e){cloudStatus("ซิงก์ไม่สำเร็จ");$("cloudHint").textContent="ตรวจสอบการตั้งค่า Supabase และตาราง transactions: "+(e.message||e)}finally{cloudBusy=false}}
+async function initialCloudSync(){if(!cloudUser)return;cloudBusy=true;cloudStatus("กำลังโหลดข้อมูล…");try{const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");if(error)throw error;const merged=new Map(items.map(x=>[String(x.id),x]));(data||[]).forEach(r=>merged.set(String(r.id),{id:Number(r.id),t:r.t,a:Number(r.a),c:r.c,n:r.n,d:r.d}));items=Array.from(merged.values());localStorage.setItem("money",JSON.stringify(items));const rows=items.filter(x=>!(data||[]).some(r=>String(r.id)===String(x.id))).map(toRow);if(rows.length){const up=await cloud.from("transactions").upsert(rows,{onConflict:"user_id,id"});if(up.error)throw up.error}render();cloudStatus("เชื่อมต่อแล้ว");$("cloudHint").textContent="ข้อมูลในเครื่องและคลาวด์ถูกรวมกันแล้ว ใช้อีเมลเดียวกันบนอุปกรณ์อื่น";}catch(e){cloudStatus("เชื่อมต่อไม่สำเร็จ");$("cloudHint").textContent=e.message||String(e)}finally{cloudBusy=false}}
+function updateCloudUI(){const logged=!!cloudUser;$("cloudLogout").hidden=!logged;$("cloudLogin").hidden=logged;$("cloudSignup").hidden=logged;$("cloudEmail").hidden=logged;$("cloudPassword").hidden=logged;if(logged){cloudStatus("เข้าสู่ระบบแล้ว");$("cloudHint").textContent="บัญชี: "+cloudUser.email+" · ใช้บัญชีนี้บนอุปกรณ์อื่นเพื่อซิงก์ข้อมูล"}else cloudStatus("ยังไม่เชื่อมต่อ")}
+async function startCloud(){if(!window.supabase){cloudStatus("โหลดระบบคลาวด์ไม่สำเร็จ");return}cloud=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await cloud.auth.getSession();cloudUser=data.session?.user||null;updateCloudUI();if(cloudUser)await initialCloudSync();cloud.auth.onAuthStateChange((event,session)=>{cloudUser=session?.user||null;updateCloudUI();if(event==="SIGNED_IN")setTimeout(initialCloudSync,0);if(event==="SIGNED_OUT"){cloudStatus("ออกจากระบบแล้ว")}});cloud.channel("money-live").on("postgres_changes",{event:"*",schema:"public",table:"transactions"},async payload=>{if(!cloudUser||cloudBusy)return;const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");if(!error&&data){items=data.map(r=>({id:Number(r.id),t:r.t,a:Number(r.a),c:r.c,n:r.n,d:r.d}));localStorage.setItem("money",JSON.stringify(items));render();cloudStatus("ซิงก์เรียลไทม์แล้ว")}}).subscribe()}
+$("cloudSignup").onclick=async()=>{const email=$("cloudEmail").value.trim(),password=$("cloudPassword").value;if(!email||password.length<6){toast("กรอกอีเมลและรหัสผ่านอย่างน้อย 6 ตัว");return}const {error}=await cloud.auth.signUp({email,password});if(error)toast(error.message);else toast("สมัครแล้ว ตรวจอีเมลเพื่อยืนยันบัญชี (ถ้าระบบร้องขอ)")};
+$("cloudLogin").onclick=async()=>{const {error}=await cloud.auth.signInWithPassword({email:$("cloudEmail").value.trim(),password:$("cloudPassword").value});if(error)toast(error.message);else toast("เข้าสู่ระบบแล้ว")};
+$("cloudLogout").onclick=async()=>{const {error}=await cloud.auth.signOut();if(error)toast(error.message);else{cloudUser=null;updateCloudUI();toast("ออกจากระบบแล้ว")}};
+
+startCloud();
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 </script>
 </body></html>
