@@ -113,6 +113,14 @@ async function initialCloudSync(){
   const remote=(data||[]).map(normalize),byId=new Map(remote.map(x=>[String(x.id),x]));
   const signatures=new Set(remote.map(signature));let candidateId=Math.max(Date.now(),...remote.map(x=>x.id+1),...items.map(x=>x.id+1));
   const additions=[];
+  const combined=[...remote,...items];
+  const hasAnchor=combined.some(x=>x.t==="in"&&Number(x.a)===1112&&x.d==="2026-11-10"&&x.n==="ปรับยอดให้ตรงเงินจริง");
+  const hasAdjustment=combined.some(x=>x.t==="ex"&&Number(x.a)===498&&x.d==="2026-11-10"&&x.c==="อื่นๆ");
+  if(hasAnchor&&!hasAdjustment){
+   while(byId.has(String(candidateId)))candidateId++;
+   const adjustment={id:candidateId++,t:"ex",a:498,c:"อื่นๆ",n:"",d:"2026-11-10"};
+   additions.push(adjustment);byId.set(String(adjustment.id),adjustment);signatures.add(signature(adjustment));
+  }
   for(const raw of items){
    const local=normalize(raw),sameId=byId.get(String(local.id));
    if(sameId){if(signature(sameId)===signature(local))continue;while(byId.has(String(candidateId)))candidateId++;local.id=candidateId++}
@@ -216,10 +224,13 @@ $("cloudLogin").onclick=async()=>{
 };
 $("cloudLogout").onclick=async()=>{const {error}=await cloud.auth.signOut();if(error)toast(error.message);else toast("ออกจากระบบแล้ว")};
 $("month").value=today().slice(0,7);$("date").value=today();setType("ex");load();
-if(items.length===0&&!localStorage.getItem("money_seed1")){
- const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];
- items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));persist();localStorage.setItem("money_seed1","1");
+function screenshotAdjustment(source){
+ const anchor=source.some(x=>x.t==="in"&&Number(x.a)===1112&&x.d==="2026-11-10"&&x.n==="ปรับยอดให้ตรงเงินจริง");
+ const exists=source.some(x=>x.t==="ex"&&Number(x.a)===498&&x.d==="2026-11-10"&&x.c==="อื่นๆ");
+ return anchor&&!exists?{id:nextId(),t:"ex",a:498,c:"อื่นๆ",n:"",d:"2026-11-10"}:null;
 }
+const localAdjustment=screenshotAdjustment(items);
+if(localAdjustment){items.push(localAdjustment);persist()}
 render();
 startCloud().catch(e=>{status("เริ่มระบบไม่สำเร็จ");$("cloudHint").textContent=e.message||String(e)});
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
