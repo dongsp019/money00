@@ -74,8 +74,8 @@ $("noDelete").onclick=()=>$("modal").style.display="none";$("yesDelete").onclick
 function download(data,name,type){const blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
 function exportData(){download(JSON.stringify({version:1,exportedAt:new Date().toISOString(),items},null,2),"money-backup.json","application/json");toast("ส่งออกข้อมูลแล้ว")}
 $("exportBtn").onclick=exportData;$("backupBtn").onclick=exportData;$("importBtn").onclick=()=>$("fileInput").click();
-$("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;if(!Array.isArray(arr))throw Error();if(!confirm("นำเข้าข้อมูล "+arr.length+" รายการ? ข้อมูลปัจจุบันจะถูกแทนที่"))return;items=arr;save();render();toast("นำเข้าข้อมูลแล้ว")}catch{toast("ไฟล์ไม่ถูกต้อง")}e.target.value=""};
-$("clearBtn").onclick=()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];save();render();toast("ล้างข้อมูลแล้ว")}};
+$("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;if(!Array.isArray(arr))throw Error();if(!confirm("นำเข้าข้อมูล "+arr.length+" รายการ? ข้อมูลปัจจุบันจะถูกแทนที่"))return;items=arr;save();if(cloudUser){await cloud.from("transactions").delete().eq("user_id",cloudUser.id);await pushLocalToCloud()}render();toast("นำเข้าข้อมูลแล้ว")}catch{toast("ไฟล์ไม่ถูกต้อง")}e.target.value=""};
+$("clearBtn").onclick=()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];save();if(cloudUser){await cloud.from("transactions").delete().eq("user_id",cloudUser.id);cloudStatus("ล้างข้อมูลบนคลาวด์แล้ว")}render();toast("ล้างข้อมูลแล้ว")}};
 let cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false;
 const cloudStatus=(s)=>$("cloudStatus").textContent=s;
 function scheduleCloudSave(){if(!cloudUser||cloudBusy)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,700)}
