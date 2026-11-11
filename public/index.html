@@ -193,7 +193,7 @@ $("fileInput").onchange=async e=>{
   if(!Array.isArray(arr)||!arr.every(validItem))throw Error("รูปแบบรายการไม่ถูกต้อง");
   if(!confirm("นำเข้า "+arr.length+" รายการ และแทนที่ข้อมูลปัจจุบันทั้งในเครื่องและคลาวด์?"))return;
   items=arr.map(normalize);persist();
-  if(cloudUser){const del=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(del.error)throw del.error;await pushLocalToCloud();if($("cloudStatus").textContent==="ซิงก์ไม่สำเร็จ")throw Error("บันทึกข้อมูลขึ้นคลาวด์ไม่สำเร็จ")}
+  if(cloudUser){const del=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(del.error)throw del.error;dirtyRecords=new Map(items.map(x=>[String(x.id),x]));await pushLocalToCloud();if(dirtyRecords.size||$("cloudStatus").textContent==="ซิงก์ไม่สำเร็จ")throw Error("บันทึกข้อมูลขึ้นคลาวด์ไม่สำเร็จ")}
   render();toast("นำเข้าข้อมูลแล้ว");
  }catch(err){toast("นำเข้าไม่สำเร็จ: "+err.message)}finally{e.target.value=""}
 };
