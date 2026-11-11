@@ -114,7 +114,7 @@ async function initialCloudSync(){
   const signatures=new Set(remote.map(signature));let candidateId=Math.max(Date.now(),...remote.map(x=>x.id+1),...items.map(x=>x.id+1));
   const additions=[];
   const combined=[...remote,...items];
-  const hasAnchor=combined.some(x=>x.t==="in"&&Number(x.a)===1112&&x.d==="2026-11-10"&&x.n==="ปรับยอดให้ตรงเงินจริง");
+  const hasAnchor=combined.some(x=>x.t==="in"&&Number(x.a)===1112&&x.d==="2026-11-10");
   const hasAdjustment=combined.some(x=>x.t==="ex"&&Number(x.a)===498&&x.d==="2026-11-10"&&x.c==="อื่นๆ");
   if(hasAnchor&&!hasAdjustment){
    while(byId.has(String(candidateId)))candidateId++;
@@ -225,7 +225,7 @@ $("cloudLogin").onclick=async()=>{
 $("cloudLogout").onclick=async()=>{const {error}=await cloud.auth.signOut();if(error)toast(error.message);else toast("ออกจากระบบแล้ว")};
 $("month").value=today().slice(0,7);$("date").value=today();setType("ex");load();
 function screenshotAdjustment(source){
- const anchor=source.some(x=>x.t==="in"&&Number(x.a)===1112&&x.d==="2026-11-10"&&x.n==="ปรับยอดให้ตรงเงินจริง");
+ const anchor=source.some(x=>x.t==="in"&&Number(x.a)===1112&&x.d==="2026-11-10");
  const exists=source.some(x=>x.t==="ex"&&Number(x.a)===498&&x.d==="2026-11-10"&&x.c==="อื่นๆ");
  return anchor&&!exists?{id:nextId(),t:"ex",a:498,c:"อื่นๆ",n:"",d:"2026-11-10"}:null;
 }
