@@ -55,7 +55,7 @@ const SUPABASE_URL="https://rvtbcjrcqlokgvtpenik.supabase.co";
 const SUPABASE_KEY="sb_publishable_YXmB2qa8OCeX1py7E24fTg_3omH7Ke-";
 const CATS={ex:["อาหาร","เดินทาง","ของใช้","เกม","บันเทิง","การศึกษา","สุขภาพ","ที่พัก","อื่นๆ"],in:["รายรับ","เงินเดือน","ค่าขนม","รายได้พิเศษ","งานเสริม","อื่น ๆ"]};
 const $=id=>document.getElementById(id);
-let type="ex",items=[],editing=null,deleteId=null,cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false,refreshAgain=false,channel=null;
+let type="ex",items=[],editing=null,deleteId=null,cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false,refreshAgain=false,channel=null,dirtyRecords=new Map();
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const money=n=>"฿"+Number(n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const icons={"อาหาร":"🍜","เดินทาง":"🛵","ของใช้":"🛍️","เกม":"🎮","บันเทิง":"🎧","การศึกษา":"📚","สุขภาพ":"💊","ที่พัก":"🏠","รายรับ":"💵","เงินเดือน":"💼","ค่าขนม":"🪙","รายได้พิเศษ":"✨","งานเสริม":"🧾","อื่นๆ":"📌","อื่น ๆ":"📌"};
@@ -78,19 +78,20 @@ function render(){
 function resetForm(){editing=null;$("amount").value="";$("note").value="";$("date").value=today();$("saveBtn").textContent="＋ เพิ่มรายการ";$("formTitle").textContent="เพิ่มรายการ";$("editHint").hidden=true;setType("ex")}
 function edit(id){const x=items.find(v=>String(v.id)===String(id));if(!x)return;editing=x.id;setType(x.t);$("amount").value=x.a;$("note").value=x.n;$("date").value=x.d;$("category").value=x.c;$("saveBtn").textContent="บันทึกการแก้ไข";$("formTitle").textContent="แก้ไขรายการ";$("editHint").hidden=false;window.scrollTo({top:0,behavior:"smooth"})}
 function nextId(){let n=Date.now();const used=new Set(items.map(x=>Number(x.id)));while(used.has(n))n++;return n}
-function scheduleCloudSave(){if(!cloudUser||!cloud)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,500)}
-function save(){persist();scheduleCloudSave()}
+function scheduleCloudSave(record){if(!cloudUser||!cloud||!record)return;dirtyRecords.set(String(record.id),normalize(record));clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,500)}
+function save(record){persist();scheduleCloudSave(record)}
 function toRow(x){return {user_id:cloudUser.id,id:Number(x.id),t:x.t,a:Number(x.a),c:String(x.c||""),n:String(x.n||""),d:x.d}}
 function signature(x){return [x.t,Number(x.a).toFixed(2),x.c||"",x.n||"",x.d].join("|")}
 async function pushLocalToCloud(){
- if(!cloudUser||!cloud||cloudBusy)return;
+ if(!cloudUser||!cloud||cloudBusy||dirtyRecords.size===0)return;
  clearTimeout(cloudTimer);cloudBusy=true;status("กำลังซิงก์…");
+ const batch=Array.from(dirtyRecords.values());batch.forEach(x=>dirtyRecords.delete(String(x.id)));
  try{
-  const rows=items.map(toRow);
+  const rows=batch.map(toRow);
   for(let i=0;i<rows.length;i+=200){const {error}=await cloud.from("transactions").upsert(rows.slice(i,i+200),{onConflict:"user_id,id"});if(error)throw error}
   status("ซิงก์แล้ว");$("cloudHint").textContent="บันทึกข้อมูลบนคลาวด์เรียบร้อย";
- }catch(e){status("ซิงก์ไม่สำเร็จ");$("cloudHint").textContent="ซิงก์ไม่สำเร็จ: "+(e.message||String(e))}
- finally{cloudBusy=false;if(refreshAgain){refreshAgain=false;await refreshFromCloud()}}
+ }catch(e){batch.forEach(x=>dirtyRecords.set(String(x.id),x));status("ซิงก์ไม่สำเร็จ");$("cloudHint").textContent="ซิงก์ไม่สำเร็จ: "+(e.message||String(e))}
+ finally{cloudBusy=false;if(dirtyRecords.size){clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,700)}else if(refreshAgain){refreshAgain=false;await refreshFromCloud()}}
 }
 async function refreshFromCloud(){
  if(!cloudUser||!cloud)return;
