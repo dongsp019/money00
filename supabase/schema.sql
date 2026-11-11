@@ -11,25 +11,36 @@ create table if not exists public.transactions (
 
 alter table public.transactions enable row level security;
 
+drop policy if exists "Users can read their own transactions" on public.transactions;
+drop policy if exists "Users can insert their own transactions" on public.transactions;
+drop policy if exists "Users can update their own transactions" on public.transactions;
+drop policy if exists "Users can delete their own transactions" on public.transactions;
+
 create policy "Users can read their own transactions"
-on public.transactions for select
-to authenticated
+on public.transactions for select to authenticated
 using (auth.uid() = user_id);
 
 create policy "Users can insert their own transactions"
-on public.transactions for insert
-to authenticated
+on public.transactions for insert to authenticated
 with check (auth.uid() = user_id);
 
 create policy "Users can update their own transactions"
-on public.transactions for update
-to authenticated
+on public.transactions for update to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
 create policy "Users can delete their own transactions"
-on public.transactions for delete
-to authenticated
+on public.transactions for delete to authenticated
 using (auth.uid() = user_id);
 
-alter publication supabase_realtime add table public.transactions;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'transactions'
+  ) then
+    alter publication supabase_realtime add table public.transactions;
+  end if;
+end $$;
