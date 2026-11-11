@@ -83,7 +83,8 @@ function save(record){persist();scheduleCloudSave(record)}
 function toRow(x){return {user_id:cloudUser.id,id:Number(x.id),t:x.t,a:Number(x.a),c:String(x.c||""),n:String(x.n||""),d:x.d}}
 function signature(x){return [x.t,Number(x.a).toFixed(2),x.c||"",x.n||"",x.d].join("|")}
 async function pushLocalToCloud(){
- if(!cloudUser||!cloud||cloudBusy||dirtyRecords.size===0)return;
+ if(!cloudUser||!cloud||dirtyRecords.size===0)return;
+ if(cloudBusy){clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,500);return}
  clearTimeout(cloudTimer);cloudBusy=true;status("กำลังซิงก์…");
  const batch=Array.from(dirtyRecords.values());batch.forEach(x=>dirtyRecords.delete(String(x.id)));
  try{
@@ -100,7 +101,9 @@ async function refreshFromCloud(){
  try{
   const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
   if(error)throw error;
-  items=(data||[]).map(r=>normalize(r));persist();render();status("เชื่อมต่อแล้ว");
+  const merged=new Map((data||[]).map(r=>{const x=normalize(r);return [String(x.id),x]}));
+  for(const x of dirtyRecords.values())merged.set(String(x.id),normalize(x));
+  items=Array.from(merged.values());persist();render();status("เชื่อมต่อแล้ว");
  }catch(e){status("โหลดข้อมูลไม่สำเร็จ");$("cloudHint").textContent=e.message||String(e)}
  finally{cloudBusy=false;if(refreshAgain){refreshAgain=false;await refreshFromCloud()}}
 }
@@ -133,7 +136,9 @@ async function initialCloudSync(){
   }
   const {data:finalRows,error:finalError}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
   if(finalError)throw finalError;
-  items=(finalRows||[]).map(normalize);persist();render();
+  const merged=new Map((finalRows||[]).map(r=>{const x=normalize(r);return [String(x.id),x]}));
+  for(const x of dirtyRecords.values())merged.set(String(x.id),normalize(x));
+  items=Array.from(merged.values());persist();render();
   localStorage.setItem("money_cloud_user",cloudUser.id);
   status("ซิงก์แล้ว");$("cloudHint").textContent="เชื่อมต่อบัญชีแล้ว ข้อมูลในอุปกรณ์นี้ถูกรวมกับคลาวด์โดยไม่เขียนทับรายการเดิม";
  }catch(e){status("เชื่อมต่อไม่สำเร็จ");$("cloudHint").textContent="เกิดข้อผิดพลาด: "+(e.message||String(e))}
