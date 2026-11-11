@@ -46,7 +46,7 @@ button,input,select{font:inherit}button{cursor:pointer}.top{display:flex;justify
 <div class="sectionhead"><h2>รายการเคลื่อนไหว</h2><span id="count">0 รายการ</span></div>
 <section class="card list" id="entries"></section>
 <div class="sectionhead"><h2>จัดการข้อมูล</h2></div>
-<section class="card"><div class="tools"><button class="secondary" id="backupBtn">สำรองข้อมูล</button><button class="secondary" id="importBtn">นำเข้าข้อมูล</button><button class="secondary" id="clearBtn">ล้างข้อมูล</button></div><button class="primary" id="applySheetBtn" style="margin-top:10px" hidden>ปรับยอดตามตารางที่ส่งมา</button><input type="file" id="fileInput" accept="application/json" hidden><p class="hint">ข้อมูลจะเก็บในอุปกรณ์นี้ และซิงก์ข้ามอุปกรณ์เมื่อเข้าสู่ระบบคลาวด์ด้วยบัญชีเดียวกัน แนะนำให้สำรองข้อมูลเป็นระยะ</p></section>
+<section class="card"><div class="tools"><button class="secondary" id="backupBtn">สำรองข้อมูล</button><button class="secondary" id="importBtn">นำเข้าข้อมูล</button><button class="secondary" id="clearBtn">ล้างข้อมูล</button></div><input type="file" id="fileInput" accept="application/json" hidden><p class="hint">ข้อมูลจะเก็บในอุปกรณ์นี้ และซิงก์ข้ามอุปกรณ์เมื่อเข้าสู่ระบบคลาวด์ด้วยบัญชีเดียวกัน แนะนำให้สำรองข้อมูลเป็นระยะ</p></section>
 <footer class="bottom"><span>ข้อมูลส่วนตัวของคุณ • ซิงก์ผ่านคลาวด์เมื่อเข้าสู่ระบบ</span></footer><div class="toast" id="toast"></div>
 <div class="modalback" id="modal"><div class="modal"><h3>ยืนยันการลบรายการ?</h3><p class="hint">รายการนี้จะถูกลบออกจากอุปกรณ์</p><div class="actions"><button class="secondary" id="noDelete">ยกเลิก</button><button class="secondary danger" id="yesDelete">ลบรายการ</button></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -154,7 +154,6 @@ function switchLocalAccount(userId){
 }
 function updateCloudUI(){
  const logged=!!cloudUser;
- $("applySheetBtn").hidden=!logged;
  $("cloudLogout").hidden=!logged;$("cloudLogin").hidden=logged;$("cloudSignup").hidden=logged;
  $("cloudEmail").hidden=logged;$("cloudPassword").hidden=logged;
  if(logged){status("เข้าสู่ระบบแล้ว");$("cloudHint").textContent="บัญชี: "+(cloudUser.email||"")+". ข้อมูลกำลังซิงก์กับอุปกรณ์อื่น"}
@@ -205,40 +204,6 @@ $("fileInput").onchange=async e=>{
   if(cloudUser){const del=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(del.error)throw del.error;dirtyRecords=new Map(items.map(x=>[String(x.id),x]));await pushLocalToCloud();if(dirtyRecords.size||$("cloudStatus").textContent==="ซิงก์ไม่สำเร็จ")throw Error("บันทึกข้อมูลขึ้นคลาวด์ไม่สำเร็จ")}
   render();toast("นำเข้าข้อมูลแล้ว");
  }catch(err){toast("นำเข้าไม่สำเร็จ: "+err.message)}finally{e.target.value=""}
-};
-$("applySheetBtn").onclick=async()=>{
- if(!cloudUser||!cloud)return toast("กรุณาเข้าสู่ระบบคลาวด์ก่อน");
- const rows=[
- {id:202611020001,t:"ex",a:120,c:"อาหาร",n:"ค่าอาหาร",d:"2026-11-02"},
- {id:202611060001,t:"in",a:537,c:"รายรับ",n:"รายได้ Grab 5-6 พ.ย. (รวม)",d:"2026-11-06"},
- {id:202611070001,t:"in",a:527,c:"รายรับ",n:"รายได้ Grab (18 งาน)",d:"2026-11-07"},
- {id:202611080001,t:"in",a:338,c:"รายรับ",n:"รายได้ Grab (10 งาน)",d:"2026-11-08"},
- {id:202611090001,t:"in",a:417,c:"รายรับ",n:"รายได้ Grab (10 งาน)",d:"2026-11-09"},
- {id:202611100001,t:"in",a:1112,c:"อื่น ๆ",n:"ปรับยอดให้ตรงเงินจริง",d:"2026-11-10"},
- {id:202611100002,t:"in",a:358,c:"รายรับ",n:"รายรับ",d:"2026-11-10"},
- {id:202611100003,t:"ex",a:498,c:"อื่น ๆ",n:"อื่น ๆ",d:"2026-11-10"},
- {id:202611110001,t:"ex",a:40,c:"อาหาร",n:"อาหาร",d:"2026-11-11"},
- {id:202611110002,t:"in",a:500,c:"รายรับ",n:"รายอาทิต",d:"2026-11-11"},
- {id:202611110003,t:"ex",a:1100,c:"อาหาร",n:"พะโล้",d:"2026-11-11"},
- {id:202611110004,t:"in",a:133,c:"รายรับ",n:"Grab",d:"2026-11-11"},
- {id:202611110005,t:"in",a:380,c:"รายรับ",n:"Grab",d:"2026-11-11"},
- {id:202611110006,t:"in",a:159,c:"งานเสริม",n:"Grab",d:"2026-11-11"}
- ];
- if(!confirm("แทนที่รายการทั้งหมดในบัญชีคลาวด์และอุปกรณ์นี้ด้วยข้อมูล 14 รายการจากตาราง? ยอดใหม่: รายรับ ฿4,461 / รายจ่าย ฿1,758 / คงเหลือ ฿2,703"))return;
- clearTimeout(cloudTimer);dirtyRecords.clear();status("กำลังปรับยอด…");
- try{
-  const up=await cloud.from("transactions").upsert(rows.map(toRow),{onConflict:"user_id,id"});
-  if(up.error)throw up.error;
-  const keep=rows.map(x=>x.id).join(",");
-  const del=await cloud.from("transactions").delete().not("id","in","("+keep+")");
-  if(del.error)throw del.error;
-  const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
-  if(error)throw error;
-  if((data||[]).length!==14)throw new Error("ตรวจสอบแล้วพบ "+(data||[]).length+" รายการ แทนที่จะเป็น 14 รายการ");
-  items=data.map(normalize);persist();render();status("ปรับยอดสำเร็จ");
-  $("cloudHint").textContent="ตั้งค่าตามตารางแล้ว: รายรับ ฿4,461 · รายจ่าย ฿1,758 · คงเหลือ ฿2,703";
-  toast("ปรับยอดตามตารางสำเร็จ");
- }catch(e){status("ปรับยอดไม่สำเร็จ");$("cloudHint").textContent="เกิดข้อผิดพลาด: "+(e.message||String(e));await refreshFromCloud()}
 };
 $("clearBtn").onclick=async()=>{
  if(!confirm("ลบรายการทั้งหมดทั้งในอุปกรณ์และคลาวด์ใช่ไหม? กรุณาสำรองข้อมูลก่อน"))return;
