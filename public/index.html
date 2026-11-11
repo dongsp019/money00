@@ -46,8 +46,8 @@ button,input,select{font:inherit}button{cursor:pointer}.top{display:flex;justify
 <div class="sectionhead"><h2>รายการเคลื่อนไหว</h2><span id="count">0 รายการ</span></div>
 <section class="card list" id="entries"></section>
 <div class="sectionhead"><h2>จัดการข้อมูล</h2></div>
-<section class="card"><div class="tools"><button class="secondary" id="backupBtn">สำรองข้อมูล</button><button class="secondary" id="importBtn">นำเข้าข้อมูล</button><button class="secondary" id="clearBtn">ล้างข้อมูล</button></div><input type="file" id="fileInput" accept="application/json" hidden><p class="hint">ข้อมูลเก็บไว้ในเบราว์เซอร์ของอุปกรณ์นี้ แนะนำให้สำรองข้อมูลเป็นระยะ และอย่าล้างข้อมูลเว็บไซต์หากยังไม่ได้สำรอง</p></section>
-<footer class="bottom"><span>ข้อมูลส่วนตัวของคุณ • จัดเก็บบนอุปกรณ์นี้</span></footer><div class="toast" id="toast"></div>
+<section class="card"><div class="tools"><button class="secondary" id="backupBtn">สำรองข้อมูล</button><button class="secondary" id="importBtn">นำเข้าข้อมูล</button><button class="secondary" id="clearBtn">ล้างข้อมูล</button></div><input type="file" id="fileInput" accept="application/json" hidden><p class="hint">ข้อมูลจะเก็บในอุปกรณ์นี้ และซิงก์ข้ามอุปกรณ์เมื่อเข้าสู่ระบบคลาวด์ด้วยบัญชีเดียวกัน แนะนำให้สำรองข้อมูลเป็นระยะ</p></section>
+<footer class="bottom"><span>ข้อมูลส่วนตัวของคุณ • ซิงก์ผ่านคลาวด์เมื่อเข้าสู่ระบบ</span></footer><div class="toast" id="toast"></div>
 <div class="modalback" id="modal"><div class="modal"><h3>ยืนยันการลบรายการ?</h3><p class="hint">รายการนี้จะถูกลบออกจากอุปกรณ์</p><div class="actions"><button class="secondary" id="noDelete">ยกเลิก</button><button class="secondary danger" id="yesDelete">ลบรายการ</button></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -75,7 +75,7 @@ function download(data,name,type){const blob=new Blob([data],{type}),url=URL.cre
 function exportData(){download(JSON.stringify({version:1,exportedAt:new Date().toISOString(),items},null,2),"money-backup.json","application/json");toast("ส่งออกข้อมูลแล้ว")}
 $("exportBtn").onclick=exportData;$("backupBtn").onclick=exportData;$("importBtn").onclick=()=>$("fileInput").click();
 $("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;if(!Array.isArray(arr))throw Error();if(!confirm("นำเข้าข้อมูล "+arr.length+" รายการ? ข้อมูลปัจจุบันจะถูกแทนที่"))return;items=arr;save();if(cloudUser){await cloud.from("transactions").delete().eq("user_id",cloudUser.id);await pushLocalToCloud()}render();toast("นำเข้าข้อมูลแล้ว")}catch{toast("ไฟล์ไม่ถูกต้อง")}e.target.value=""};
-$("clearBtn").onclick=()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];save();if(cloudUser){await cloud.from("transactions").delete().eq("user_id",cloudUser.id);cloudStatus("ล้างข้อมูลบนคลาวด์แล้ว")}render();toast("ล้างข้อมูลแล้ว")}};
+$("clearBtn").onclick=async()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้และบัญชีคลาวด์ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];localStorage.setItem("money",JSON.stringify(items));if(cloudUser){const {error}=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(error){toast("ลบข้อมูลบนคลาวด์ไม่สำเร็จ: "+error.message);return}cloudStatus("ล้างข้อมูลบนคลาวด์แล้ว")}render();toast("ล้างข้อมูลแล้ว")}};
 let cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false;
 const cloudStatus=(s)=>$("cloudStatus").textContent=s;
 function scheduleCloudSave(){if(!cloudUser||cloudBusy)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,700)}
