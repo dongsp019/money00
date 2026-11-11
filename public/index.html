@@ -54,47 +54,172 @@ button,input,select{font:inherit}button{cursor:pointer}.top{display:flex;justify
 const SUPABASE_URL="https://rvtbcjrcqlokgvtpenik.supabase.co";
 const SUPABASE_KEY="sb_publishable_YXmB2qa8OCeX1py7E24fTg_3omH7Ke-";
 const CATS={ex:["อาหาร","เดินทาง","ของใช้","เกม","บันเทิง","การศึกษา","สุขภาพ","ที่พัก","อื่นๆ"],in:["รายรับ","เงินเดือน","ค่าขนม","รายได้พิเศษ","งานเสริม","อื่น ๆ"]};
-const $=id=>document.getElementById(id);let type="ex",items=[],editing=null,deleteId=null;
-const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const $=id=>document.getElementById(id);
+let type="ex",items=[],editing=null,deleteId=null,cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false,refreshAgain=false,channel=null;
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const money=n=>"฿"+Number(n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const icons={"อาหาร":"🍜","เดินทาง":"🛵","ของใช้":"🛍️","เกม":"🎮","บันเทิง":"🎧","การศึกษา":"📚","สุขภาพ":"💊","ที่พัก":"🏠","รายรับ":"💵","เงินเดือน":"💼","ค่าขนม":"🪙","รายได้พิเศษ":"✨","งานเสริม":"🧾","อื่นๆ":"📌","อื่น ๆ":"📌"};
-function load(){try{items=JSON.parse(localStorage.getItem("money")||"[]");if(!Array.isArray(items))items=[]}catch{items=[]}}
-function save(){localStorage.setItem("money",JSON.stringify(items));scheduleCloudSave()}
-function setType(t){type=t;$("expenseTab").className=t==="ex"?"active exp":"";$("incomeTab").className=t==="in"?"active inc":"";$("category").innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join("")}
-function render(){const m=$("month").value;const list=items.filter(x=>x.d?.slice(0,7)===m).sort((a,b)=>b.d.localeCompare(a.d)||b.id-a.id);let inc=0,exp=0;list.forEach(x=>x.t==="in"?inc+=Number(x.a):exp+=Number(x.a));$("income").textContent=money(inc);$("expense").textContent=money(exp);$("balance").textContent=money(inc-exp);$("balance").style.color=inc-exp<0?"var(--red)":"var(--text)";$("count").textContent=list.length+" รายการ";
-$("entries").innerHTML=list.length?list.map(x=>`<div class="entry"><div class="bubble">${icons[x.c]||"📌"}</div><div class="entrymain"><b>${esc(x.c)}</b><small>${esc(x.d)}${x.n?" · "+esc(x.n):""}</small></div><div class="entryright"><strong class="${x.t==="in"?"green":"red"}">${x.t==="in"?"+":"−"}${money(x.a)}</strong><button data-edit="${x.id}">แก้ไข · ลบ</button></div></div>`).join(""):'<div class="empty">ยังไม่มีรายการในเดือนนี้<br>เริ่มบันทึกรายรับหรือรายจ่ายได้เลย</div>'}
+const status=s=>$("cloudStatus").textContent=s;
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function validItem(x){return x&&Number.isSafeInteger(Number(x.id))&&Number(x.id)>0&&(x.t==="in"||x.t==="ex")&&Number(x.a)>0&&Number.isFinite(Number(x.a))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.d||""))}
+function normalize(x){return {id:Number(x.id),t:x.t,a:Number(x.a),c:String(x.c||"อื่น ๆ"),n:String(x.n||""),d:String(x.d)}}
+function load(){try{const v=JSON.parse(localStorage.getItem("money")||"[]");items=Array.isArray(v)?v.filter(validItem).map(normalize):[]}catch{items=[]}}
+function persist(){localStorage.setItem("money",JSON.stringify(items))}
+function toast(s){$("toast").textContent=s;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),2200)}
+function setType(t){type=t;$("expenseTab").className=t==="ex"?"active exp":"";$("incomeTab").className=t==="in"?"active inc":"";$("category").innerHTML=CATS[t].map(c=>"<option>"+esc(c)+"</option>").join("")}
+function render(){
+ const m=$("month").value;
+ const list=items.filter(x=>x.d.slice(0,7)===m).sort((a,b)=>b.d.localeCompare(a.d)||b.id-a.id);
+ let inc=0,exp=0;list.forEach(x=>x.t==="in"?inc+=x.a:exp+=x.a);
+ $("income").textContent=money(inc);$("expense").textContent=money(exp);$("balance").textContent=money(inc-exp);
+ $("balance").style.color=inc-exp<0?"var(--red)":"var(--text)";$("count").textContent=list.length+" รายการ";
+ $("entries").innerHTML=list.length?list.map(x=>'<div class="entry"><div class="bubble">'+(icons[x.c]||"📌")+'</div><div class="entrymain"><b>'+esc(x.c)+'</b><small>'+esc(x.d)+(x.n?" · "+esc(x.n):"")+'</small></div><div class="entryright"><strong class="'+(x.t==="in"?"green":"red")+'">'+(x.t==="in"?"+":"−")+money(x.a)+'</strong><button data-edit="'+x.id+'">แก้ไข · ลบ</button></div></div>').join(""):'<div class="empty">ยังไม่มีรายการในเดือนนี้<br>เริ่มบันทึกรายรับหรือรายจ่ายได้เลย</div>';
+}
 function resetForm(){editing=null;$("amount").value="";$("note").value="";$("date").value=today();$("saveBtn").textContent="＋ เพิ่มรายการ";$("formTitle").textContent="เพิ่มรายการ";$("editHint").hidden=true;setType("ex")}
-function edit(id){const x=items.find(v=>String(v.id)===String(id));if(!x)return;editing=x.id;setType(x.t);$("amount").value=x.a;$("note").value=x.n||"";$("date").value=x.d;$("category").value=x.c;$("saveBtn").textContent="บันทึกการแก้ไข";$("formTitle").textContent="แก้ไขรายการ";$("editHint").hidden=false;window.scrollTo({top:0,behavior:"smooth"})}
-function toast(s){$("toast").textContent=s;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),1800)}
+function edit(id){const x=items.find(v=>String(v.id)===String(id));if(!x)return;editing=x.id;setType(x.t);$("amount").value=x.a;$("note").value=x.n;$("date").value=x.d;$("category").value=x.c;$("saveBtn").textContent="บันทึกการแก้ไข";$("formTitle").textContent="แก้ไขรายการ";$("editHint").hidden=false;window.scrollTo({top:0,behavior:"smooth"})}
+function nextId(){let n=Date.now();const used=new Set(items.map(x=>Number(x.id)));while(used.has(n))n++;return n}
+function scheduleCloudSave(){if(!cloudUser||!cloud)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,500)}
+function save(){persist();scheduleCloudSave()}
+function toRow(x){return {user_id:cloudUser.id,id:Number(x.id),t:x.t,a:Number(x.a),c:String(x.c||""),n:String(x.n||""),d:x.d}}
+function signature(x){return [x.t,Number(x.a).toFixed(2),x.c||"",x.n||"",x.d].join("|")}
+async function pushLocalToCloud(){
+ if(!cloudUser||!cloud||cloudBusy)return;
+ clearTimeout(cloudTimer);cloudBusy=true;status("กำลังซิงก์…");
+ try{
+  const rows=items.map(toRow);
+  for(let i=0;i<rows.length;i+=200){const {error}=await cloud.from("transactions").upsert(rows.slice(i,i+200),{onConflict:"user_id,id"});if(error)throw error}
+  status("ซิงก์แล้ว");$("cloudHint").textContent="บันทึกข้อมูลบนคลาวด์เรียบร้อย";
+ }catch(e){status("ซิงก์ไม่สำเร็จ");$("cloudHint").textContent="ซิงก์ไม่สำเร็จ: "+(e.message||String(e))}
+ finally{cloudBusy=false;if(refreshAgain){refreshAgain=false;await refreshFromCloud()}}
+}
+async function refreshFromCloud(){
+ if(!cloudUser||!cloud)return;
+ if(cloudBusy){refreshAgain=true;return}
+ cloudBusy=true;
+ try{
+  const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
+  if(error)throw error;
+  items=(data||[]).map(r=>normalize(r));persist();render();status("เชื่อมต่อแล้ว");
+ }catch(e){status("โหลดข้อมูลไม่สำเร็จ");$("cloudHint").textContent=e.message||String(e)}
+ finally{cloudBusy=false;if(refreshAgain){refreshAgain=false;await refreshFromCloud()}}
+}
+async function initialCloudSync(){
+ if(!cloudUser)return;
+ clearTimeout(cloudTimer);cloudBusy=true;status("กำลังรวมข้อมูล…");
+ try{
+  const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
+  if(error)throw error;
+  const remote=(data||[]).map(normalize),byId=new Map(remote.map(x=>[String(x.id),x]));
+  const signatures=new Set(remote.map(signature));let candidateId=Math.max(Date.now(),...remote.map(x=>x.id+1),...items.map(x=>x.id+1));
+  const additions=[];
+  for(const raw of items){
+   const local=normalize(raw),sameId=byId.get(String(local.id));
+   if(sameId){if(signature(sameId)===signature(local))continue;while(byId.has(String(candidateId)))candidateId++;local.id=candidateId++}
+   const sig=signature(local);if(signatures.has(sig))continue;
+   byId.set(String(local.id),local);signatures.add(sig);additions.push(local);
+  }
+  if(additions.length){
+   const rows=additions.map(toRow);
+   for(let i=0;i<rows.length;i+=200){const up=await cloud.from("transactions").upsert(rows.slice(i,i+200),{onConflict:"user_id,id"});if(up.error)throw up.error}
+  }
+  const {data:finalRows,error:finalError}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
+  if(finalError)throw finalError;
+  items=(finalRows||[]).map(normalize);persist();render();
+  localStorage.setItem("money_cloud_user",cloudUser.id);
+  status("ซิงก์แล้ว");$("cloudHint").textContent="เชื่อมต่อบัญชีแล้ว ข้อมูลในอุปกรณ์นี้ถูกรวมกับคลาวด์โดยไม่เขียนทับรายการเดิม";
+ }catch(e){status("เชื่อมต่อไม่สำเร็จ");$("cloudHint").textContent="เกิดข้อผิดพลาด: "+(e.message||String(e))}
+ finally{cloudBusy=false}
+}
+function switchLocalAccount(userId){
+ const previous=localStorage.getItem("money_last_user");
+ if(previous&&previous!==userId){
+  localStorage.setItem("money_account_"+previous,JSON.stringify(items));
+  try{items=JSON.parse(localStorage.getItem("money_account_"+userId)||"[]").filter(validItem).map(normalize)}catch{items=[]}
+  persist();
+ }else if(!previous){
+  // First sign-in: preserve and migrate the existing local-only data.
+  localStorage.setItem("money_legacy_backup",JSON.stringify(items));
+ }
+ localStorage.setItem("money_last_user",userId);
+ localStorage.setItem("money_account_"+userId,JSON.stringify(items));
+}
+function updateCloudUI(){
+ const logged=!!cloudUser;
+ $("cloudLogout").hidden=!logged;$("cloudLogin").hidden=logged;$("cloudSignup").hidden=logged;
+ $("cloudEmail").hidden=logged;$("cloudPassword").hidden=logged;
+ if(logged){status("เข้าสู่ระบบแล้ว");$("cloudHint").textContent="บัญชี: "+(cloudUser.email||"")+". ข้อมูลกำลังซิงก์กับอุปกรณ์อื่น"}
+ else if(!cloud)status("กำลังเริ่มระบบ…");else status("ยังไม่เข้าสู่ระบบ");
+}
+async function startCloud(){
+ if(!window.supabase){status("โหลดระบบคลาวด์ไม่สำเร็จ");$("cloudHint").textContent="ตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้า";return}
+ cloud=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ const {data,error}=await cloud.auth.getSession();if(error)throw error;
+ cloudUser=data.session?.user||null;
+ if(cloudUser){switchLocalAccount(cloudUser.id);updateCloudUI();await initialCloudSync()}else updateCloudUI();
+ cloud.auth.onAuthStateChange((event,session)=>{
+  const next=session?.user||null;
+  if(event==="SIGNED_IN"&&next){cloudUser=next;switchLocalAccount(next.id);updateCloudUI();setTimeout(()=>initialCloudSync(),0)}
+  else if(event==="SIGNED_OUT"){cloudUser=null;updateCloudUI();status("ออกจากระบบแล้ว")}
+ });
+ channel=cloud.channel("money-live-"+Math.random().toString(36).slice(2)).on("postgres_changes",{event:"*",schema:"public",table:"transactions"},()=>{
+  if(!cloudUser)return;
+  if(cloudBusy||cloudTimer){refreshAgain=true;return}
+  refreshFromCloud();
+ }).subscribe((s)=>{if(s==="CHANNEL_ERROR"||s==="TIMED_OUT")status("Realtime ขัดข้อง")});
+}
 $("expenseTab").onclick=()=>setType("ex");$("incomeTab").onclick=()=>setType("in");$("month").onchange=render;$("cancelEdit").onclick=resetForm;
-$("saveBtn").onclick=()=>{const a=Number($("amount").value),d=$("date").value||today();if(!(a>0)){toast("กรุณาใส่จำนวนเงินให้ถูกต้อง");$("amount").focus();return}const record={id:editing??Date.now(),t:type,a,c:$("category").value,n:$("note").value.trim(),d};if(editing!==null){items=items.map(x=>x.id===editing?record:x);toast("แก้ไขรายการแล้ว")}else{items.push(record);toast("เพิ่มรายการแล้ว")}save();$("month").value=d.slice(0,7);resetForm();render()};
-$("entries").onclick=e=>{const b=e.target.closest("[data-edit]");if(b){const id=b.dataset.edit;const x=items.find(v=>String(v.id)===id);if(!x)return;const choice=prompt("พิมพ์ E เพื่อแก้ไข หรือ D เพื่อลบ","E");if(choice?.toUpperCase()==="E")edit(id);else if(choice?.toUpperCase()==="D"){deleteId=id;$("modal").style.display="flex"}}};
-$("noDelete").onclick=()=>$("modal").style.display="none";$("yesDelete").onclick=async()=>{const removed=deleteId;items=items.filter(x=>String(x.id)!==String(removed));save();if(cloudUser)await cloud.from("transactions").delete().eq("user_id",cloudUser.id).eq("id",Number(removed));$("modal").style.display="none";render();toast("ลบรายการแล้ว")};
-function download(data,name,type){const blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
+$("saveBtn").onclick=()=>{
+ const a=Number($("amount").value),d=$("date").value||today();
+ if(!(a>0)||!Number.isFinite(a)){toast("กรุณาใส่จำนวนเงินให้ถูกต้อง");$("amount").focus();return}
+ const record={id:editing??nextId(),t:type,a,c:$("category").value,n:$("note").value.trim(),d};
+ if(editing!==null)items=items.map(x=>x.id===editing?record:x);else items.push(record);
+ save();$("month").value=d.slice(0,7);resetForm();render();toast(editing!==null?"แก้ไขรายการแล้ว":"เพิ่มรายการแล้ว");
+};
+$("entries").onclick=e=>{const b=e.target.closest("[data-edit]");if(!b)return;const id=b.dataset.edit;const x=items.find(v=>String(v.id)===id);if(!x)return;const choice=prompt("พิมพ์ E เพื่อแก้ไข หรือ D เพื่อลบ","E");if(choice?.toUpperCase()==="E")edit(id);else if(choice?.toUpperCase()==="D"){deleteId=id;$("modal").style.display="flex"}};
+$("noDelete").onclick=()=>$("modal").style.display="none";
+$("yesDelete").onclick=async()=>{
+ const removed=deleteId;items=items.filter(x=>String(x.id)!==String(removed));persist();$("modal").style.display="none";render();
+ if(cloudUser){status("กำลังลบ…");const {error}=await cloud.from("transactions").delete().eq("user_id",cloudUser.id).eq("id",Number(removed));if(error){toast("ลบบนคลาวด์ไม่สำเร็จ: "+error.message);await refreshFromCloud();return}status("ซิงก์แล้ว")}
+ toast("ลบรายการแล้ว");
+};
+function download(data,name,mime){const blob=new Blob([data],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function exportData(){download(JSON.stringify({version:1,exportedAt:new Date().toISOString(),items},null,2),"money-backup.json","application/json");toast("ส่งออกข้อมูลแล้ว")}
 $("exportBtn").onclick=exportData;$("backupBtn").onclick=exportData;$("importBtn").onclick=()=>$("fileInput").click();
-$("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;if(!Array.isArray(arr))throw Error();if(!confirm("นำเข้าข้อมูล "+arr.length+" รายการ? ข้อมูลปัจจุบันจะถูกแทนที่"))return;items=arr;save();if(cloudUser){await cloud.from("transactions").delete().eq("user_id",cloudUser.id);await pushLocalToCloud()}render();toast("นำเข้าข้อมูลแล้ว")}catch{toast("ไฟล์ไม่ถูกต้อง")}e.target.value=""};
-$("clearBtn").onclick=async()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้และบัญชีคลาวด์ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];localStorage.setItem("money",JSON.stringify(items));if(cloudUser){const {error}=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(error){toast("ลบข้อมูลบนคลาวด์ไม่สำเร็จ: "+error.message);return}cloudStatus("ล้างข้อมูลบนคลาวด์แล้ว")}render();toast("ล้างข้อมูลแล้ว")}};
-let cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false;
-const cloudStatus=(s)=>$("cloudStatus").textContent=s;
-function scheduleCloudSave(){if(!cloudUser||cloudBusy)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,700)}
-function toRow(x){return {user_id:cloudUser.id,id:Number(x.id),t:x.t,a:Number(x.a),c:String(x.c||""),n:String(x.n||""),d:x.d}}
-async function pushLocalToCloud(){if(!cloudUser||!cloud)return;cloudBusy=true;cloudStatus("กำลังซิงก์…");try{const rows=items.map(toRow);if(rows.length){const {error}=await cloud.from("transactions").upsert(rows,{onConflict:"user_id,id"});if(error)throw error}cloudStatus("ซิงก์แล้ว")}catch(e){cloudStatus("ซิงก์ไม่สำเร็จ");$("cloudHint").textContent="ตรวจสอบการตั้งค่า Supabase และตาราง transactions: "+(e.message||e)}finally{cloudBusy=false}}
-async function initialCloudSync(){if(!cloudUser)return;cloudBusy=true;cloudStatus("กำลังโหลดข้อมูล…");try{const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");if(error)throw error;const merged=new Map(items.map(x=>[String(x.id),x]));(data||[]).forEach(r=>merged.set(String(r.id),{id:Number(r.id),t:r.t,a:Number(r.a),c:r.c,n:r.n,d:r.d}));items=Array.from(merged.values());localStorage.setItem("money",JSON.stringify(items));const rows=items.filter(x=>!(data||[]).some(r=>String(r.id)===String(x.id))).map(toRow);if(rows.length){const up=await cloud.from("transactions").upsert(rows,{onConflict:"user_id,id"});if(up.error)throw up.error}render();cloudStatus("เชื่อมต่อแล้ว");$("cloudHint").textContent="ข้อมูลในเครื่องและคลาวด์ถูกรวมกันแล้ว ใช้อีเมลเดียวกันบนอุปกรณ์อื่น";}catch(e){cloudStatus("เชื่อมต่อไม่สำเร็จ");$("cloudHint").textContent=e.message||String(e)}finally{cloudBusy=false}}
-function updateCloudUI(){const logged=!!cloudUser;$("cloudLogout").hidden=!logged;$("cloudLogin").hidden=logged;$("cloudSignup").hidden=logged;$("cloudEmail").hidden=logged;$("cloudPassword").hidden=logged;if(logged){cloudStatus("เข้าสู่ระบบแล้ว");$("cloudHint").textContent="บัญชี: "+cloudUser.email+" · ใช้บัญชีนี้บนอุปกรณ์อื่นเพื่อซิงก์ข้อมูล"}else cloudStatus("ยังไม่เชื่อมต่อ")}
-async function startCloud(){if(!window.supabase){cloudStatus("โหลดระบบคลาวด์ไม่สำเร็จ");return}cloud=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await cloud.auth.getSession();cloudUser=data.session?.user||null;updateCloudUI();if(cloudUser)await initialCloudSync();cloud.auth.onAuthStateChange((event,session)=>{cloudUser=session?.user||null;updateCloudUI();if(event==="SIGNED_IN")setTimeout(initialCloudSync,0);if(event==="SIGNED_OUT"){cloudStatus("ออกจากระบบแล้ว")}});cloud.channel("money-live").on("postgres_changes",{event:"*",schema:"public",table:"transactions"},async payload=>{if(!cloudUser||cloudBusy)return;const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");if(!error&&data){items=data.map(r=>({id:Number(r.id),t:r.t,a:Number(r.a),c:r.c,n:r.n,d:r.d}));localStorage.setItem("money",JSON.stringify(items));render();cloudStatus("ซิงก์เรียลไทม์แล้ว")}}).subscribe()}
-$("cloudSignup").onclick=async()=>{const email=$("cloudEmail").value.trim(),password=$("cloudPassword").value;if(!email||password.length<6){toast("กรอกอีเมลและรหัสผ่านอย่างน้อย 6 ตัว");return}const {error}=await cloud.auth.signUp({email,password});if(error)toast(error.message);else toast("สมัครแล้ว ตรวจอีเมลเพื่อยืนยันบัญชี (ถ้าระบบร้องขอ)")};
-$("cloudLogin").onclick=async()=>{const {error}=await cloud.auth.signInWithPassword({email:$("cloudEmail").value.trim(),password:$("cloudPassword").value});if(error)toast(error.message);else toast("เข้าสู่ระบบแล้ว")};
-$("cloudLogout").onclick=async()=>{const {error}=await cloud.auth.signOut();if(error)toast(error.message);else{cloudUser=null;updateCloudUI();toast("ออกจากระบบแล้ว")}};
-
-startCloud();
-load();
-// Keep the original app's existing localStorage records; seed only on a genuinely empty first run.
-if(items.length===0&&!localStorage.getItem("money_seed1")){const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));save();localStorage.setItem("money_seed1","1")}
-$("month").value=today().slice(0,7);$("date").value=today();setType("ex");render();
-
-
+$("fileInput").onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{
+  const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;
+  if(!Array.isArray(arr)||!arr.every(validItem))throw Error("รูปแบบรายการไม่ถูกต้อง");
+  if(!confirm("นำเข้า "+arr.length+" รายการ และแทนที่ข้อมูลปัจจุบันทั้งในเครื่องและคลาวด์?"))return;
+  items=arr.map(normalize);persist();
+  if(cloudUser){const del=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(del.error)throw del.error;await pushLocalToCloud();if($("cloudStatus").textContent==="ซิงก์ไม่สำเร็จ")throw Error("บันทึกข้อมูลขึ้นคลาวด์ไม่สำเร็จ")}
+  render();toast("นำเข้าข้อมูลแล้ว");
+ }catch(err){toast("นำเข้าไม่สำเร็จ: "+err.message)}finally{e.target.value=""}
+};
+$("clearBtn").onclick=async()=>{
+ if(!confirm("ลบรายการทั้งหมดทั้งในอุปกรณ์และคลาวด์ใช่ไหม? กรุณาสำรองข้อมูลก่อน"))return;
+ if(cloudUser){const {error}=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(error){toast("ลบบนคลาวด์ไม่สำเร็จ: "+error.message);return}}
+ items=[];persist();render();status(cloudUser?"ซิงก์แล้ว":"ยังไม่เข้าสู่ระบบ");toast("ล้างข้อมูลแล้ว");
+};
+$("cloudSignup").onclick=async()=>{
+ const email=$("cloudEmail").value.trim(),password=$("cloudPassword").value;
+ if(!email||password.length<8){toast("กรอกอีเมลและรหัสผ่านอย่างน้อย 8 ตัว");return}
+ const {data,error}=await cloud.auth.signUp({email,password});
+ if(error)toast(error.message);else if(data.session)toast("สมัครและเข้าสู่ระบบแล้ว");else toast("สมัครสำเร็จ กรุณายืนยันอีเมล แล้วกลับมาเข้าสู่ระบบ");
+};
+$("cloudLogin").onclick=async()=>{
+ const email=$("cloudEmail").value.trim(),password=$("cloudPassword").value;
+ if(!email||!password){toast("กรอกอีเมลและรหัสผ่าน");return}
+ const {error}=await cloud.auth.signInWithPassword({email,password});if(error)toast(error.message);else toast("เข้าสู่ระบบแล้ว");
+};
+$("cloudLogout").onclick=async()=>{const {error}=await cloud.auth.signOut();if(error)toast(error.message);else toast("ออกจากระบบแล้ว")};
+$("month").value=today().slice(0,7);$("date").value=today();setType("ex");load();
+if(items.length===0&&!localStorage.getItem("money_seed1")){
+ const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];
+ items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));persist();localStorage.setItem("money_seed1","1");
+}
+render();
+startCloud().catch(e=>{status("เริ่มระบบไม่สำเร็จ");$("cloudHint").textContent=e.message||String(e)});
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 </script>
 </body></html>
