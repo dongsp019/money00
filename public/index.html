@@ -76,11 +76,6 @@ function exportData(){download(JSON.stringify({version:1,exportedAt:new Date().t
 $("exportBtn").onclick=exportData;$("backupBtn").onclick=exportData;$("importBtn").onclick=()=>$("fileInput").click();
 $("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text()),arr=Array.isArray(data)?data:data.items;if(!Array.isArray(arr))throw Error();if(!confirm("นำเข้าข้อมูล "+arr.length+" รายการ? ข้อมูลปัจจุบันจะถูกแทนที่"))return;items=arr;save();render();toast("นำเข้าข้อมูลแล้ว")}catch{toast("ไฟล์ไม่ถูกต้อง")}e.target.value=""};
 $("clearBtn").onclick=()=>{if(confirm("ลบรายการทั้งหมดในอุปกรณ์นี้ใช่ไหม? แนะนำให้สำรองข้อมูลก่อน")){items=[];save();render();toast("ล้างข้อมูลแล้ว")}};
-load();
-// Keep the original app's existing localStorage records; seed only on a genuinely empty first run.
-if(items.length===0&&!localStorage.getItem("money_seed1")){const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));save();localStorage.setItem("money_seed1","1")}
-$("month").value=today().slice(0,7);$("date").value=today();setType("ex");render();
-
 let cloud=null,cloudUser=null,cloudTimer=null,cloudBusy=false;
 const cloudStatus=(s)=>$("cloudStatus").textContent=s;
 function scheduleCloudSave(){if(!cloudUser||cloudBusy)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(pushLocalToCloud,700)}
@@ -94,6 +89,12 @@ $("cloudLogin").onclick=async()=>{const {error}=await cloud.auth.signInWithPassw
 $("cloudLogout").onclick=async()=>{const {error}=await cloud.auth.signOut();if(error)toast(error.message);else{cloudUser=null;updateCloudUI();toast("ออกจากระบบแล้ว")}};
 
 startCloud();
+load();
+// Keep the original app's existing localStorage records; seed only on a genuinely empty first run.
+if(items.length===0&&!localStorage.getItem("money_seed1")){const seed=[[1,"ex",120,"อาหาร","ค่าอาหาร","2026-11-02"],[2,"in",537,"รายรับ","รายได้ Grab 5-6 พ.ย. (รวม)","2026-11-06"],[3,"in",527,"รายรับ","รายได้ Grab (18 งาน)","2026-11-07"],[4,"in",338,"รายรับ","รายได้ Grab (10 งาน)","2026-11-08"],[5,"in",417,"รายรับ","รายได้ Grab (10 งาน)","2026-11-09"],[6,"in",1112,"อื่น ๆ","ปรับยอดให้ตรงเงินจริง","2026-11-10"],[7,"in",358,"รายรับ","รายรับ","2026-11-10"]];items=seed.map(s=>({id:s[0],t:s[1],a:s[2],c:s[3],n:s[4],d:s[5]}));save();localStorage.setItem("money_seed1","1")}
+$("month").value=today().slice(0,7);$("date").value=today();setType("ex");render();
+
+
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 </script>
 </body></html>
