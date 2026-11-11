@@ -95,7 +95,7 @@ async function pushLocalToCloud(){
 }
 async function refreshFromCloud(){
  if(!cloudUser||!cloud)return;
- if(cloudBusy){refreshAgain=true;return}
+ if(cloudBusy||dirtyRecords.size){refreshAgain=true;return}
  cloudBusy=true;
  try{
   const {data,error}=await cloud.from("transactions").select("id,t,a,c,n,d").order("id");
@@ -172,14 +172,14 @@ $("expenseTab").onclick=()=>setType("ex");$("incomeTab").onclick=()=>setType("in
 $("saveBtn").onclick=()=>{
  const a=Number($("amount").value),d=$("date").value||today();
  if(!(a>0)||!Number.isFinite(a)){toast("กรุณาใส่จำนวนเงินให้ถูกต้อง");$("amount").focus();return}
- const record={id:editing??nextId(),t:type,a,c:$("category").value,n:$("note").value.trim(),d};
- if(editing!==null)items=items.map(x=>x.id===editing?record:x);else items.push(record);
- save();$("month").value=d.slice(0,7);resetForm();render();toast(editing!==null?"แก้ไขรายการแล้ว":"เพิ่มรายการแล้ว");
+ const wasEditing=editing!==null;const record={id:editing??nextId(),t:type,a,c:$("category").value,n:$("note").value.trim(),d};
+ if(wasEditing)items=items.map(x=>x.id===editing?record:x);else items.push(record);
+ save(record);$("month").value=d.slice(0,7);resetForm();render();toast(wasEditing?"แก้ไขรายการแล้ว":"เพิ่มรายการแล้ว");
 };
 $("entries").onclick=e=>{const b=e.target.closest("[data-edit]");if(!b)return;const id=b.dataset.edit;const x=items.find(v=>String(v.id)===id);if(!x)return;const choice=prompt("พิมพ์ E เพื่อแก้ไข หรือ D เพื่อลบ","E");if(choice?.toUpperCase()==="E")edit(id);else if(choice?.toUpperCase()==="D"){deleteId=id;$("modal").style.display="flex"}};
 $("noDelete").onclick=()=>$("modal").style.display="none";
 $("yesDelete").onclick=async()=>{
- const removed=deleteId;items=items.filter(x=>String(x.id)!==String(removed));persist();$("modal").style.display="none";render();
+ const removed=deleteId;items=items.filter(x=>String(x.id)!==String(removed));dirtyRecords.delete(String(removed));persist();$("modal").style.display="none";render();
  if(cloudUser){status("กำลังลบ…");const {error}=await cloud.from("transactions").delete().eq("user_id",cloudUser.id).eq("id",Number(removed));if(error){toast("ลบบนคลาวด์ไม่สำเร็จ: "+error.message);await refreshFromCloud();return}status("ซิงก์แล้ว")}
  toast("ลบรายการแล้ว");
 };
@@ -199,6 +199,7 @@ $("fileInput").onchange=async e=>{
 };
 $("clearBtn").onclick=async()=>{
  if(!confirm("ลบรายการทั้งหมดทั้งในอุปกรณ์และคลาวด์ใช่ไหม? กรุณาสำรองข้อมูลก่อน"))return;
+ clearTimeout(cloudTimer);dirtyRecords.clear();
  if(cloudUser){const {error}=await cloud.from("transactions").delete().eq("user_id",cloudUser.id);if(error){toast("ลบบนคลาวด์ไม่สำเร็จ: "+error.message);return}}
  items=[];persist();render();status(cloudUser?"ซิงก์แล้ว":"ยังไม่เข้าสู่ระบบ");toast("ล้างข้อมูลแล้ว");
 };
